@@ -1,39 +1,72 @@
 package com.example.buysell.Service;
 
+import com.example.buysell.models.Image;
 import com.example.buysell.models.Product;
+import com.example.buysell.repositories.ProductRepository;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
+@Slf4j
 public class ProductService {
-    List<Product> products = new ArrayList<>();
-    private long ID = 0;
+    @Autowired
+    private ProductRepository productRepository;
 
-    {
-        products.add(new Product(++ID, "PlayStation 5", "Simple description", 67000, "Krasnoyarsk", "tomas"));
-        products.add(new Product(++ID, "Iphone 8", "Simple description", 24000, "Moscow", "artmcoder"));
+
+    public List<Product> list(String title) {
+
+        if (title != null) return productRepository.findByTitle(title);
+        return productRepository.findAll();
     }
 
-    public List<Product> list() {
-        return products;
+    @SneakyThrows
+    public void saveProduct(Product product, MultipartFile one, MultipartFile two, MultipartFile three) {
+        Image image1;
+        Image image2;
+        Image image3;
+
+        if (one.getSize() != 0) {
+            image1 = toImageEntity(one);
+            image1.setPreviewImage(true);
+            product.addImageProduct(image1);
+        }
+        if (two.getSize() != 0) {
+            image2 = toImageEntity(two);
+            image2.setPreviewImage(true);
+            product.addImageProduct(image2);
+        }
+        if (three.getSize() != 0) {
+            image3 = toImageEntity(one);
+            image3.setPreviewImage(true);
+            product.addImageProduct(image3);
+        }
+        log.info("saving product title {} author {}", product.getTitle(),product.getAuthor());
+        Product productDb = productRepository.save(product);
+        productDb.setPreviewImageId(productDb.getImages().get(0).getId());
+        productRepository.save(product);
     }
 
-    public void saveProduct(Product product) {
-        product.setId(++ID);
-        products.add(product);
+    @SneakyThrows
+    private Image toImageEntity(MultipartFile file) {
+        Image image = new Image();
+        image.setName(file.getName());
+        image.setOriginalFileName(file.getOriginalFilename());
+        image.setContentType(file.getContentType());
+        image.setSize(file.getSize());
+        image.setBytes(file.getBytes());
+        return image;
     }
 
     public void productDelete(Long id) {
-        products.removeIf(product -> product.getId().equals(id));
+        productRepository.deleteById(id);
     }
 
     public Product getProductById(Long id) {
-        for (Product product : products) {
-            if (product.getId().equals(id))
-                return product;
-        }
-        return null;
+        return productRepository.findById(id).orElse(null);
     }
 }
